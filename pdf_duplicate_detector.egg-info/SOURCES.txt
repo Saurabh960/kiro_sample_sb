@@ -1,0 +1,7 @@
+pyproject.toml
+pdf_duplicate_detector/__init__.py
+pdf_duplicate_detector.egg-info/PKG-INFO
+pdf_duplicate_detector.egg-info/SOURCES.txt
+pdf_duplicate_detector.egg-info/dependency_links.txt
+pdf_duplicate_detector.egg-info/requires.txt
+pdf_duplicate_detector.egg-info/top_level.txt

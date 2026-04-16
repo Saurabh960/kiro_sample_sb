@@ -1,0 +1,10 @@
+{
+  "documents": [
+    {
+      "doc_id": "9ddec197-728f-4b2e-9530-faa74d698d18",
+      "filename": "test_doc1.pdf",
+      "text": "this is a test document about machine learning and artificial intelligence. neural networks are a key component of deep learning systems.",
+      "ingested_at": "2026-04-15T12:21:21.839858+00:00"
+    }
+  ]
+}
