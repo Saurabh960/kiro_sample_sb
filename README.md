@@ -11,24 +11,28 @@ python3 -m venv .venv
 
 ## How to Run
 
-**Add a PDF to the store:**
+**Compare two PDFs directly (simplest way):**
+```bash
+.venv/bin/python -m pdf_duplicate_detector.main compare file1.pdf file2.pdf
+```
+
+**Add a PDF to the store (for batch use):**
 ```bash
 .venv/bin/python -m pdf_duplicate_detector.main ingest path/to/your.pdf
 ```
 
-**Check a PDF for duplicates:**
+**Check a PDF against the store:**
 ```bash
 .venv/bin/python -m pdf_duplicate_detector.main query path/to/another.pdf
 ```
 
-**Use a custom store file:**
-```bash
-.venv/bin/python -m pdf_duplicate_detector.main --store my_collection.json ingest doc.pdf
-.venv/bin/python -m pdf_duplicate_detector.main --store my_collection.json query doc2.pdf
-```
-
 ## What to Expect
 
+**Compare mode:**
+- `Similarity score: 1.0000` / `DUPLICATE — these documents match (>= 0.98 threshold)`
+- `Similarity score: 0.2928` / `NOT a duplicate (below 0.98 threshold)`
+
+**Store mode:**
 - **Duplicate found:** `DUPLICATE FOUND (score: 1.0000)` with the matching document ID
 - **No duplicate:** `No duplicate found (highest score: 0.2928)`
 - **Empty store:** `Store is empty — no documents to compare against.`

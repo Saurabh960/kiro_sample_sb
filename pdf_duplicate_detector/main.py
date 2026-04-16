@@ -54,6 +54,30 @@ def cmd_query(args: argparse.Namespace) -> None:
         print(f"No duplicate found (highest score: {result.highest_score:.4f})")
 
 
+def cmd_compare(args: argparse.Namespace) -> None:
+    """Compare two PDFs directly and report similarity."""
+    extractor = PDFTextExtractor()
+    vectorizer = TFIDFVectorizer()
+    detector = DuplicateDetector()
+
+    text_a = extractor.extract_text(args.pdf1)
+    text_b = extractor.extract_text(args.pdf2)
+
+    preprocessed_a = vectorizer.preprocess(text_a)
+    preprocessed_b = vectorizer.preprocess(text_b)
+
+    vectors = vectorizer.fit_transform([preprocessed_a, preprocessed_b])
+    score = detector.cosine_similarity(vectors[0], vectors[1])
+
+    is_duplicate = score >= detector.DUPLICATE_THRESHOLD
+
+    print(f"Similarity score: {score:.4f}")
+    if is_duplicate:
+        print(f"DUPLICATE — these documents match (>= {detector.DUPLICATE_THRESHOLD} threshold)")
+    else:
+        print(f"NOT a duplicate (below {detector.DUPLICATE_THRESHOLD} threshold)")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="PDF Duplicate Detector")
     parser.add_argument(
@@ -63,6 +87,10 @@ def main() -> None:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    compare_parser = subparsers.add_parser("compare", help="Compare two PDFs directly")
+    compare_parser.add_argument("pdf1", help="Path to the first PDF")
+    compare_parser.add_argument("pdf2", help="Path to the second PDF")
+
     ingest_parser = subparsers.add_parser("ingest", help="Ingest a PDF into the store")
     ingest_parser.add_argument("pdf", help="Path to the PDF file")
 
@@ -71,7 +99,9 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    if args.command == "ingest":
+    if args.command == "compare":
+        cmd_compare(args)
+    elif args.command == "ingest":
         cmd_ingest(args)
     elif args.command == "query":
         cmd_query(args)
