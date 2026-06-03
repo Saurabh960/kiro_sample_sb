@@ -1,8 +1,9 @@
-"""CLI entry point for the PDF Duplicate Detector."""
+"""Interactive CLI for the PDF Duplicate Detector."""
 
 from __future__ import annotations
 
-import argparse
+import glob
+import os
 import sys
 
 from pdf_duplicate_detector.detector import DuplicateDetector
@@ -11,100 +12,68 @@ from pdf_duplicate_detector.ingestion import PDFIngestionService
 from pdf_duplicate_detector.store import VectorStore
 from pdf_duplicate_detector.vectorizer import TFIDFVectorizer
 
-DEFAULT_STORE_PATH = "document_store.json"
 
-
-def create_service(store_path: str = DEFAULT_STORE_PATH) -> PDFIngestionService:
-    """Wire all components together and return a ready-to-use service."""
+def main() -> None:
     extractor = PDFTextExtractor()
     vectorizer = TFIDFVectorizer()
     store = VectorStore()
     detector = DuplicateDetector()
+    service = PDFIngestionService(extractor, vectorizer, store, detector)
 
-    store.load(store_path, vectorizer)
+    # Step 1: Ask for repository path
+    repo_path = input("Enter the path to your PDF repository folder: ").strip()
+    if not os.path.isdir(repo_path):
+        print(f"Error: '{repo_path}' is not a valid directory.")
+        sys.exit(1)
 
-    return PDFIngestionService(extractor, vectorizer, store, detector)
+    # Load all PDFs from that path
+    pdf_files = glob.glob(os.path.join(repo_path, "*.pdf"))
+    if not pdf_files:
+        print(f"No PDF files found in '{repo_path}'.")
+        sys.exit(1)
 
+    print(f"\nLoading {len(pdf_files)} PDF(s) into the vector store...")
+    for pdf_path in pdf_files:
+        filename = os.path.basename(pdf_path)
+        try:
+            service.ingest(pdf_path, filename)
+            print(f"  ✓ {filename}")
+        except Exception as e:
+            print(f"  ✗ {filename} — {e}")
 
-def cmd_ingest(args: argparse.Namespace) -> None:
-    """Ingest a PDF into the document store."""
-    service = create_service(args.store)
-    result = service.ingest(args.pdf, args.pdf.split("/")[-1])
+    print(f"\nRepository loaded. {store.document_count()} document(s) in store.\n")
 
-    # Persist after successful ingestion
-    service._store.save(args.store)
+    # Step 2: Query loop
+    while True:
+        query_path = input("Enter path to a PDF to check (or 'quit' to exit): ").strip()
+        if query_path.lower() in ("quit", "q", "exit"):
+            print("Goodbye!")
+            break
 
-    print(f"Ingested: {result.doc_id}")
-    print(result.message)
+        if not os.path.isfile(query_path):
+            print(f"  File not found: '{query_path}'\n")
+            continue
 
+        try:
+            result = service.query(query_path)
+        except Exception as e:
+            print(f"  Error: {e}\n")
+            continue
 
-def cmd_query(args: argparse.Namespace) -> None:
-    """Query a PDF against the document store."""
-    service = create_service(args.store)
-    result = service.query(args.pdf)
-
-    if result.store_empty:
-        print("Store is empty — no documents to compare against.")
-        return
-
-    if result.is_duplicate:
-        print(f"DUPLICATE FOUND (score: {result.highest_score:.4f})")
-        print(f"Matching document: {result.matching_doc_id}")
-    else:
-        print(f"No duplicate found (highest score: {result.highest_score:.4f})")
-
-
-def cmd_compare(args: argparse.Namespace) -> None:
-    """Compare two PDFs directly and report similarity."""
-    extractor = PDFTextExtractor()
-    vectorizer = TFIDFVectorizer()
-    detector = DuplicateDetector()
-
-    text_a = extractor.extract_text(args.pdf1)
-    text_b = extractor.extract_text(args.pdf2)
-
-    preprocessed_a = vectorizer.preprocess(text_a)
-    preprocessed_b = vectorizer.preprocess(text_b)
-
-    vectors = vectorizer.fit_transform([preprocessed_a, preprocessed_b])
-    score = detector.cosine_similarity(vectors[0], vectors[1])
-
-    is_duplicate = score >= detector.DUPLICATE_THRESHOLD
-
-    print(f"Similarity score: {score:.4f}")
-    if is_duplicate:
-        print(f"DUPLICATE — these documents match (>= {detector.DUPLICATE_THRESHOLD} threshold)")
-    else:
-        print(f"NOT a duplicate (below {detector.DUPLICATE_THRESHOLD} threshold)")
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description="PDF Duplicate Detector")
-    parser.add_argument(
-        "--store",
-        default=DEFAULT_STORE_PATH,
-        help=f"Path to the JSON store file (default: {DEFAULT_STORE_PATH})",
-    )
-    subparsers = parser.add_subparsers(dest="command", required=True)
-
-    compare_parser = subparsers.add_parser("compare", help="Compare two PDFs directly")
-    compare_parser.add_argument("pdf1", help="Path to the first PDF")
-    compare_parser.add_argument("pdf2", help="Path to the second PDF")
-
-    ingest_parser = subparsers.add_parser("ingest", help="Ingest a PDF into the store")
-    ingest_parser.add_argument("pdf", help="Path to the PDF file")
-
-    query_parser = subparsers.add_parser("query", help="Check a PDF for duplicates")
-    query_parser.add_argument("pdf", help="Path to the PDF file")
-
-    args = parser.parse_args()
-
-    if args.command == "compare":
-        cmd_compare(args)
-    elif args.command == "ingest":
-        cmd_ingest(args)
-    elif args.command == "query":
-        cmd_query(args)
+        if result.store_empty:
+            print("  Store is empty — nothing to compare against.\n")
+        elif result.is_duplicate:
+            # Find the filename for the matching doc
+            match_name = result.matching_doc_id
+            for doc in store.get_all_documents():
+                if doc.doc_id == result.matching_doc_id:
+                    match_name = doc.filename
+                    break
+            print(f"  MATCH FOUND! Score: {result.highest_score:.4f}")
+            print(f"  Closest match: {match_name}\n")
+        else:
+            print(f"  Looks like a new document :)")
+            print(f"  (Highest similarity: {result.highest_score:.4f})\n")
 
 
 if __name__ == "__main__":
