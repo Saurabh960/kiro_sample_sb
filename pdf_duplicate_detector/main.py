@@ -33,15 +33,17 @@ def main() -> None:
         sys.exit(1)
 
     print(f"\nLoading {len(pdf_files)} PDF(s) into the vector store...")
+    failed = 0
     for pdf_path in pdf_files:
         filename = os.path.basename(pdf_path)
         try:
             service.ingest(pdf_path, filename)
-            print(f"  ✓ {filename}")
         except Exception as e:
+            failed += 1
             print(f"  ✗ {filename} — {e}")
 
-    print(f"\nRepository loaded. {store.document_count()} document(s) in store.\n")
+    ingested = store.document_count()
+    print(f"\nTried {len(pdf_files)}, ingested {ingested}.\n")
 
     # Step 2: Query loop
     while True:
