@@ -58,12 +58,14 @@ Loading PDFs...
 Tried 5, ingested 5.
 
 Enter path to a PDF to check (or 'quit' to exit): /path/to/mystery.pdf
-  MATCH FOUND! Score: 0.9923
+  MATCH FOUND!
   Closest match: report2.pdf
+  Similarity score: 0.9923
 
 Enter path to a PDF to check (or 'quit' to exit): /path/to/something_new.pdf
   Looks like a new document :)
-  (Highest similarity: 0.3412)
+  Closest match: report1.pdf
+  Similarity score: 0.3412
 ```
 
 Type `quit` to exit.

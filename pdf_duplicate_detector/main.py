@@ -78,17 +78,22 @@ def main() -> None:
 
         if result.store_empty:
             print("  Store is empty — nothing to compare against.\n")
-        elif result.is_duplicate:
-            match_name = result.matching_doc_id
-            for doc in store.get_all_documents():
-                if doc.doc_id == result.matching_doc_id:
-                    match_name = doc.filename
-                    break
-            print(f"  MATCH FOUND! Score: {result.highest_score:.4f}")
-            print(f"  Closest match: {match_name}\n")
+            continue
+
+        # Find the closest matching filename
+        match_name = None
+        for doc in store.get_all_documents():
+            if doc.doc_id == result.matching_doc_id:
+                match_name = doc.filename
+                break
+
+        if result.is_duplicate:
+            print(f"  MATCH FOUND!")
         else:
             print(f"  Looks like a new document :)")
-            print(f"  (Highest similarity: {result.highest_score:.4f})\n")
+
+        print(f"  Closest match: {match_name}")
+        print(f"  Similarity score: {result.highest_score:.4f}\n")
 
 
 if __name__ == "__main__":

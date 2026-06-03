@@ -75,6 +75,6 @@ class DuplicateDetector:
         return ComparisonResult(
             is_duplicate=is_duplicate,
             highest_score=best_score,
-            matching_doc_id=best_doc_id if is_duplicate else None,
+            matching_doc_id=best_doc_id,
             store_empty=False,
         )
